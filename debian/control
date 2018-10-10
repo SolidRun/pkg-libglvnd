@@ -9,6 +9,7 @@ Build-Depends:
  libxext-dev,
  python-dev,
  python-libxml2,
+ quilt,
  x11proto-gl-dev,
  xauth,
  xvfb,

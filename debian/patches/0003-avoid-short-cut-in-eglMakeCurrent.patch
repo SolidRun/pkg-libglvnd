@@ -1,0 +1,71 @@
+From 87808626a52582779d241de75a1922e91947d2f8 Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Tue, 9 Oct 2018 20:47:31 +0200
+Subject: [PATCH 3/3] avoid short-cut in eglMakeCurrent
+
+A Context or surface may have been marked for deletion in the past and
+is invalidated by calls to either eglMakeCurrent or eglReleaseThread.
+Even if the handle of the new context looks identical it can be
+different. Therefore eglMakeCurrent must be dispatched to the vendor library.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ src/EGL/libegl.c | 27 +++++++++------------------
+ 1 file changed, 9 insertions(+), 18 deletions(-)
+
+diff --git a/src/EGL/libegl.c b/src/EGL/libegl.c
+index 8b1aabf..dc7a8f1 100644
+--- a/src/EGL/libegl.c
++++ b/src/EGL/libegl.c
+@@ -644,9 +644,7 @@ PUBLIC EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy,
+     __GLdispatchThreadState *glas;
+     __EGLdispatchThreadState *apiState;
+     __EGLvendorInfo *oldVendor, *newVendor;
+-    __EGLdisplayInfo *oldDpy, *newDpy;
+-    EGLSurface oldDraw, oldRead;
+-    EGLContext oldContext;
++    __EGLdisplayInfo *newDpy;
+     EGLBoolean ret;
+ 
+     __eglEntrypointCommon();
+@@ -679,19 +677,15 @@ PUBLIC EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy,
+ 
+         apiState = (__EGLdispatchThreadState *) glas;
+         oldVendor = apiState->currentVendor;
+-        oldDpy = apiState->currentDisplay;
+-        oldDraw = __eglGetCurrentSurface(EGL_DRAW);
+-        oldRead = __eglGetCurrentSurface(EGL_READ);
+-        oldContext = __eglGetCurrentContext();
+ 
+-        assert(oldContext != EGL_NO_CONTEXT);
+-
+-        if (dpy == oldDpy->dpy && context == oldContext
+-                && draw == oldDraw && read == oldRead) {
+-            // The current display, context, and drawables are the same, so just
+-            // return.
+-            return EGL_TRUE;
+-        }
++        // There may be a short-cut here:
++        // when the surfaces and context are already current, the eglMakeCurrent call is unnecessary.
++        // However glvnd can not know when and if surfaces and contexts are destroyed after they have been
++        // marked for deletion in eglDestroyContext and eglDestroySurface.
++        // According to the EGL 1.5 specification section 3.2, a call of eglMakeCurrent affecting a context
++        // or surface previously marked for deletion for the current thread destroys the resource.
++        // For allowing this event to take place this eglMakeCurrent call must not be hidden from the vendor
++        // implementation.
+     } else {
+         // We don't have a current context already.
+ 
+@@ -703,9 +697,6 @@ PUBLIC EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy,
+ 
+         apiState = NULL;
+         oldVendor = NULL;
+-        oldDpy = NULL;
+-        oldDraw = oldRead = EGL_NO_SURFACE;
+-        oldContext = EGL_NO_CONTEXT;
+     }
+ 
+     if (context != EGL_NO_CONTEXT) {
+-- 
+2.19.0
+

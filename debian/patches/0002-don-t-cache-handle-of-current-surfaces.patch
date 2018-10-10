@@ -1,0 +1,107 @@
+From a1f0d43c07edf02d4d52ecc714b303204be1eb9a Mon Sep 17 00:00:00 2001
+From: Josua Mayer <josua@solid-run.com>
+Date: Wed, 10 Oct 2018 12:21:20 +0200
+Subject: [PATCH 2/3] don't cache handle of current surfaces
+
+glvnd can not know when and if surface handles become invalid after
+an application calls eglDestroySurface.
+Instead query the vendor library for this EGL internal state.
+
+Signed-off-by: Josua Mayer <josua@solid-run.com>
+---
+ src/EGL/libegl.c        |  6 ++----
+ src/EGL/libeglabipriv.h |  2 +-
+ src/EGL/libeglcurrent.c | 12 ++----------
+ src/EGL/libeglcurrent.h |  2 --
+ 4 files changed, 5 insertions(+), 17 deletions(-)
+
+diff --git a/src/EGL/libegl.c b/src/EGL/libegl.c
+index d7eae20..8b1aabf 100644
+--- a/src/EGL/libegl.c
++++ b/src/EGL/libegl.c
+@@ -585,8 +585,6 @@ static EGLBoolean InternalMakeCurrentVendor(
+     ret = dpy->vendor->staticDispatch.makeCurrent(dpy->dpy, draw, read, context);
+     if (ret) {
+         apiState->currentDisplay = dpy;
+-        apiState->currentDraw = draw;
+-        apiState->currentRead = read;
+     }
+ 
+     return ret;
+@@ -682,8 +680,8 @@ PUBLIC EGLBoolean EGLAPIENTRY eglMakeCurrent(EGLDisplay dpy,
+         apiState = (__EGLdispatchThreadState *) glas;
+         oldVendor = apiState->currentVendor;
+         oldDpy = apiState->currentDisplay;
+-        oldDraw = apiState->currentDraw;
+-        oldRead = apiState->currentRead;
++        oldDraw = __eglGetCurrentSurface(EGL_DRAW);
++        oldRead = __eglGetCurrentSurface(EGL_READ);
+         oldContext = __eglGetCurrentContext();
+ 
+         assert(oldContext != EGL_NO_CONTEXT);
+diff --git a/src/EGL/libeglabipriv.h b/src/EGL/libeglabipriv.h
+index a74b394..31236a4 100644
+--- a/src/EGL/libeglabipriv.h
++++ b/src/EGL/libeglabipriv.h
+@@ -54,6 +54,7 @@ typedef struct __EGLdispatchTableStaticRec {
+     EGLBoolean (* destroySurface) (EGLDisplay dpy, EGLSurface surface);
+     EGLBoolean (* getConfigAttrib) (EGLDisplay dpy, EGLConfig config, EGLint attribute, EGLint *value);
+     EGLBoolean (* getConfigs) (EGLDisplay dpy, EGLConfig *configs, EGLint config_size, EGLint *num_config);
++    EGLSurface (* getCurrentSurface) (EGLint readdraw);
+     EGLBoolean (* makeCurrent) (EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx);
+     EGLBoolean (* queryContext) (EGLDisplay dpy, EGLContext ctx, EGLint attribute, EGLint *value);
+     const char *(* queryString) (EGLDisplay dpy, EGLint name);
+@@ -79,7 +80,6 @@ typedef struct __EGLdispatchTableStaticRec {
+ 
+ #if 0
+     EGLDisplay (* getCurrentDisplay) (void);
+-    EGLSurface (* getCurrentSurface) (EGLint readdraw);
+     EGLDisplay (* getDisplay) (EGLNativeDisplayType display_id);
+ #endif
+ 
+diff --git a/src/EGL/libeglcurrent.c b/src/EGL/libeglcurrent.c
+index cc85ac9..e11f146 100644
+--- a/src/EGL/libeglcurrent.c
++++ b/src/EGL/libeglcurrent.c
+@@ -63,14 +63,8 @@ EGLDisplay __eglGetCurrentDisplay(void)
+ EGLSurface __eglGetCurrentSurface(EGLint readDraw)
+ {
+     __EGLdispatchThreadState *state = __eglGetCurrentAPIState();
+-    if (state != NULL) {
+-        if (readDraw == EGL_DRAW) {
+-            return state->currentDraw;
+-        } else if (readDraw == EGL_READ) {
+-            return state->currentRead;
+-        } else {
+-            return EGL_NO_SURFACE;
+-        }
++    if (state != NULL && state->currentVendor != NULL) {
++        return state->currentVendor->staticDispatch.getCurrentSurface(readDraw);
+     } else {
+         return EGL_NO_SURFACE;
+     }
+@@ -170,8 +164,6 @@ __EGLdispatchThreadState *__eglCreateAPIState(void)
+     apiState->glas.threadDestroyedCallback = OnDispatchThreadDestroyed;
+ 
+     apiState->currentDisplay = NULL;
+-    apiState->currentDraw = EGL_NO_SURFACE;
+-    apiState->currentRead = EGL_NO_SURFACE;
+     apiState->currentVendor = NULL;
+ 
+     __glvndPthreadFuncs.mutex_lock(&currentStateListMutex);
+diff --git a/src/EGL/libeglcurrent.h b/src/EGL/libeglcurrent.h
+index a92b7de..eb9ce93 100644
+--- a/src/EGL/libeglcurrent.h
++++ b/src/EGL/libeglcurrent.h
+@@ -52,8 +52,6 @@ typedef struct __EGLdispatchThreadStateRec {
+     // The current display, context, and drawable for GL or GLES.
+     // Note that OpenVG will need a separate current context.
+     __EGLdisplayInfo *currentDisplay;
+-    EGLSurface currentDraw;
+-    EGLSurface currentRead;
+     __EGLvendorInfo *currentVendor;
+ 
+     struct glvnd_list entry;
+-- 
+2.19.0
+
