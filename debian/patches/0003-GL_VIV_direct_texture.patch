@@ -1,0 +1,65 @@
+diff --git a/src/generate/xml/gl.xml b/src/generate/xml/gl.xml
+index be231c7..e4d6852 100644
+--- a/src/generate/xml/gl.xml
++++ b/src/generate/xml/gl.xml
+@@ -29811,6 +29811,45 @@ typedef unsigned int GLhandleARB;
+             <param group="VertexShaderWriteMaskEXT"><ptype>GLenum</ptype> <name>outZ</name></param>
+             <param group="VertexShaderWriteMaskEXT"><ptype>GLenum</ptype> <name>outW</name></param>
+         </command>
++        <command>
++            <proto>void <name>glTexDirectVIVMap</name></proto>
++            <param><ptype>GLenum</ptype> <name>Target</name></param>
++            <param><ptype>GLsizei</ptype> <name>Width</name></param>
++            <param><ptype>GLsizei</ptype> <name>Height</name></param>
++            <param><ptype>GLenum</ptype> <name>Format</name></param>
++            <param len="1">void **<name>Logical</name></param>
++            <param len="COMPSIZE(Width,Height)">const <ptype>GLuint</ptype> *<name>Physical</name></param>
++        </command>
++        <command>
++            <proto>void <name>glTexDirectMapVIV</name></proto>
++            <param><ptype>GLenum</ptype> <name>Target</name></param>
++            <param><ptype>GLsizei</ptype> <name>Width</name></param>
++            <param><ptype>GLsizei</ptype> <name>Height</name></param>
++            <param><ptype>GLenum</ptype> <name>Format</name></param>
++            <param len="1">void **<name>Logical</name></param>
++            <param len="COMPSIZE(Width,Height)">const <ptype>GLuint</ptype> *<name>Physical</name></param>
++        </command>
++        <command>
++            <proto>void <name>glTexDirectVIV</name></proto>
++            <param><ptype>GLenum</ptype> <name>Target</name></param>
++            <param><ptype>GLsizei</ptype> <name>Width</name></param>
++            <param><ptype>GLsizei</ptype> <name>Height</name></param>
++            <param><ptype>GLenum</ptype> <name>Format</name></param>
++            <param len="COMPSIZE(Width,Height)">void **<name>Pixels</name></param>
++        </command>
++        <command>
++            <proto>void <name>glTexDirectInvalidateVIV</name></proto>
++            <param><ptype>GLenum</ptype> <name>Target</name></param>
++        </command>
++        <command>
++            <proto>void <name>glTexDirectTiledMapVIV</name></proto>
++            <param><ptype>GLenum</ptype> <name>Target</name></param>
++            <param><ptype>GLsizei</ptype> <name>Width</name></param>
++            <param><ptype>GLsizei</ptype> <name>Height</name></param>
++            <param><ptype>GLenum</ptype> <name>Format</name></param>
++            <param len="1">void **<name>Logical</name></param>
++            <param len="COMPSIZE(Width,Height)">const <ptype>GLuint</ptype> *<name>Physical</name></param>
++        </command>
+ 
+     </commands>
+ 
+@@ -46228,5 +46267,14 @@ typedef unsigned int GLhandleARB;
+                 <enum name="GL_FOG_SPECULAR_TEXTURE_WIN"/>
+             </require>
+         </extension>
++        <extension name="GL_VIV_direct_texture" supported="gles2">
++            <require>
++                <command name="glTexDirectVIVMap"/>
++                <command name="glTexDirectMapVIV"/>
++                <command name="glTexDirectVIV"/>
++                <command name="glTexDirectInvalidateVIV"/>
++                <command name="glTexDirectTiledMapVIV"/>
++            </require>
++        </extension>
+     </extensions>
+ </registry>

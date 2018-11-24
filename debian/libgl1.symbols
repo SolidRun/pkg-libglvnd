@@ -2465,6 +2465,11 @@ libGL.so.1 libgl1 #MINVER#
  glTexCoordPointerEXT@Base 0
  glTexCoordPointerListIBM@Base 0
  glTexCoordPointervINTEL@Base 0
+ glTexDirectInvalidateVIV@Base 0
+ glTexDirectMapVIV@Base 0
+ glTexDirectTiledMapVIV@Base 0
+ glTexDirectVIV@Base 0
+ glTexDirectVIVMap@Base 0
  glTexEnvf@Base 0
  glTexEnvfv@Base 0
  glTexEnvi@Base 0
